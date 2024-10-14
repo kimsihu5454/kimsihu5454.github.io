@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Shooter</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            border: 2px solid #33C3F0;
+            background-color: #0C0C0C;
+        }
+        #startScreen {
+            position: absolute;
+            color: #33C3F0;
+            font-size: 24px;
+            text-align: center;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #33C3F0;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="startScreen">Press ENTER to start<br>Use arrow keys to move<br>SPACE to shoot</div>
+    <div id="score">Score: 0</div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const scoreElement = document.getElementById('score');
+
+        let gameLoop;
+        let player = { x: canvas.width / 2, y: canvas.height - 50, width: 50, height: 50 };
+        let bullets = [];
+        let enemies = [];
+        let score = 0;
+        let gameStarted = false;
+
+        function drawPlayer() {
+            ctx.fillStyle = '#33C3F0';
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y + player.height);
+            ctx.lineTo(player.x + player.width / 2, player.y);
+            ctx.lineTo(player.x + player.width, player.y + player.height);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = '#FFF';
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, 5, 15);
+            });
+        }
+
+        function drawEnemies() {
+            ctx.fillStyle = '#FF4136';
+            enemies.forEach(enemy => {
+                ctx.beginPath();
+                ctx.moveTo(enemy.x, enemy.y);
+                ctx.lineTo(enemy.x + enemy.width / 2, enemy.y + enemy.height);
+                ctx.lineTo(enemy.x + enemy.width, enemy.y);
+                ctx.closePath();
+                ctx.fill();
+            });
+        }
+
+        function updateBullets() {
+            bullets = bullets.filter(bullet => bullet.y > 0);
+            bullets.forEach(bullet => bullet.y -= 5);
+        }
+
+        function updateEnemies() {
+            if (Math.random() < 0.02) {
+                enemies.push({
+                    x: Math.random() * (canvas.width - 30),
+                    y: 0,
+                    width: 30,
+                    height: 30
+                });
+            }
+            enemies = enemies.filter(enemy => enemy.y < canvas.height);
+            enemies.forEach(enemy => enemy.y += 2);
+        }
+
+        function checkCollisions() {
+            bullets.forEach(bullet => {
+                enemies.forEach((enemy, index) => {
+                    if (bullet.x < enemy.x + enemy.width &&
+                        bullet.x + 5 > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + 15 > enemy.y) {
+                        enemies.splice(index, 1);
+                        score += 10;
+                        scoreElement.textContent = `Score: ${score}`;
+                    }
+                });
+            });
+        }
+
+        function gameOver() {
+            cancelAnimationFrame(gameLoop);
+            ctx.fillStyle = '#33C3F0';
+            ctx.font = '48px Arial';
+            ctx.fillText('GAME OVER', canvas.width / 2 - 120, canvas.height / 2);
+            ctx.font = '24px Arial';
+            ctx.fillText(`Final Score: ${score}`, canvas.width / 2 - 70, canvas.height / 2 + 40);
+            ctx.fillText('Press ENTER to restart', canvas.width / 2 - 120, canvas.height / 2 + 80);
+            gameStarted = false;
+        }
+
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+            drawBullets();
+            drawEnemies();
+            updateBullets();
+            updateEnemies();
+            checkCollisions();
+
+            if (enemies.some(enemy => enemy.y + enemy.height > player.y)) {
+                gameOver();
+                return;
+            }
+
+            gameLoop = requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            if (!gameStarted) {
+                gameStarted = true;
+                startScreen.style.display = 'none';
+                player = { x: canvas.width / 2, y: canvas.height - 50, width: 50, height: 50 };
+                bullets = [];
+                enemies = [];
+                score = 0;
+                scoreElement.textContent = 'Score: 0';
+                update();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                startGame();
+            }
+            if (gameStarted) {
+                switch (e.key) {
+                    case 'ArrowLeft': player.x = Math.max(0, player.x - 10); break;
+                    case 'ArrowRight': player.x = Math.min(canvas.width - player.width, player.x + 10); break;
+                    case ' ': bullets.push({ x: player.x + player.width / 2 - 2.5, y: player.y }); break;
+                }
+            }
+        });
+
+        startScreen.style.display = 'block';
+    </script>
+</body>
+</html>
